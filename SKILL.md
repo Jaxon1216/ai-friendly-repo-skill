@@ -4,8 +4,8 @@ description: >-
   扫描一个代码仓库的「AI 友好度」，产出可勾选的建设建议清单，在用户授权后按勾选项施工（生成 AGENTS.md / CLAUDE.md /
   ARCHITECTURE.md / GLOSSARY.md、配置 ESLint/Prettier/Ruff 等 linter 与格式化、EditorConfig、
   提交前钩子、Conventional Commits 规范、husky+commitlint+lint-staged、以及项目特异的 git 红线 /
-  宿主端环境 / 避坑指南 / 分语言 Code Style）。当用户想让一个项目对 AI Coding 工具（Cursor / Trae / Mira /
-  Claude Code / AI CR）更友好、想提升 AI 生成代码的采纳率、想建设 AGENTS.md 或 CLAUDE.md、想给仓库补 lint /
+  宿主端环境 / 避坑指南 / 分语言 Code Style）。当用户想让一个项目对 AI Coding 工具（Codex / Cursor /
+  Claude Code）更友好、想提升 AI 生成代码的采纳率、想建设 AGENTS.md 或 CLAUDE.md、想给仓库补 lint /
   prettier / husky / commit 规范、问「这个仓库怎么让 AI 更好地理解 / 少改错」「怎么做 AI 友好度建设」「帮我扫一下仓库的
   AI 友好度」时，使用本 skill。核心原则：能被硬脚本（linter / 类型检查 / 钩子）确定性验证的规则优先，减少 AI
   决策幻觉；探测不出的项目语义（宿主端、业务黑话、避坑点）用交互提问 + 占位符让用户补全。
@@ -13,20 +13,14 @@ description: >-
 
 # AI 友好度建设 (AI-Friendly Repo)
 
-## 这个 skill 在做什么
+## 执行定位
 
-目标一句话：**让 AI Coding 工具在这个仓库里能读懂架构、遵守规范、自验通过，从根本上提升 AI 产出代码的采纳率。**
+按 **扫描 → 建议 → 授权 → 施工** 的四阶段流程建设目标仓库的 AI 友好度。执行时必须先只读扫描，再输出可勾选建议清单，等待用户授权后只施工被勾选的项。
 
-它遵循一条核心信念——**AI 读不懂的地方，新人也读不懂；AI 容易改错的地方，人类也容易改错。** 所以「AI 友好度建设」本质是用「AI 能否一次改对」当作代码质量的客观尺子，而不是讨好 AI。
-
-由此推出两条贯穿始终的设计原则，你在每一步都要记住：
-
-1. **硬脚本 > 软约定。** 能被 linter / 格式化 / 类型检查 / git 钩子确定性验证的规则，优先落成配置和脚本。因为脚本跑出来的结果没有幻觉，而写在文档里的「建议」AI 会当耳旁风、人类会忘。
-2. **探测优先，问答兜底，占位收尾。** 能从仓库文件探测出来的（技术栈、命令、目录、已装工具）自动填；探测不出但用户知道的（宿主端、业务黑话、踩坑点）交互式问用户；用户一时答不上来的，留一个高亮 `[占位：请填写…]` 让他事后补，绝不编造。
-
-## 工作流总览
-
-这是一个 **扫描 → 建议 → 授权 → 施工** 的四阶段流程。**不要跳过授权直接施工**——用户要的就是「看着决策」的掌控感。
+核心执行规则：
+- **硬脚本优先**：能被 linter / 格式化 / 类型检查 / git 钩子确定性验证的规则，优先落成配置和脚本。
+- **探测优先**：能从仓库文件探测出来的事实自动填；探测不出但用户知道的信息要问用户；用户答不上来的留 `[占位：请补充 xxx]`，不要编造。
+- **授权施工**：不要跳过建议清单直接改文件。
 
 ```
 Phase 1 扫描 (Scan)       → 探测仓库事实，读 references/detection.md
@@ -54,30 +48,24 @@ Phase 4 施工 (Build)       → 只对勾选项动手，读 references/build-*.
 
 ### 建设清单（本 skill 的建设范围）
 
-清单分四组。每组都是「一类相关的建设项」，勾选时用**建设项的名字**回复即可（如「AGENTS.md、Lint、提交钩子」或「全部」）。
+清单分四组。每组都是「一类相关的建设项」，勾选时用**建设项的名字**回复即可（如「AGENTS.md、Lint、提交钩子」或「全部」）。详细模板和施工规则按需读取对应 reference，不要把所有 reference 一次性读入上下文。
 
 **第一组 · 文档层（全部支持）**
-- **AGENTS.md** — AI 主入口。能探测的（技术栈/目录/命令）自动填，探测不出的（每次大任务后要跑什么检查、复用哪些 utils、业务约定）问用户或留占位。**保持精炼，目标 <300 行**，详细内容拆到其他文件并索引过去。
-- **CLAUDE.md** — 指向 AGENTS.md 保持单一信源，只补 Claude Code 特有的 Hard Rules 和读取顺序，**不要与 AGENTS.md 大段重复**。
-- **ARCHITECTURE.md** — 承载**运行环境信息**（宿主端是哪、是否跨端项目、技术栈全景）+ 数据流图 + 关键决策点表 + 错误码/API 契约索引。环境信息大多靠问用户。
-- **GLOSSARY.md** — 业务/框架/端容器术语表。**几乎全靠占位+问用户**，AI 探测不出业务黑话。
+- **AGENTS.md / CLAUDE.md / ARCHITECTURE.md / GLOSSARY.md**
+- 生成模板、占位规则、AGENTS.md 精简要求：读 `references/build-docs.md`
 
 **第二组 · 代码规范层（随语言定制，能装依赖的走硬脚本）**
-- **格式化 (Format)** — Prettier / Biome / Ruff-format / gofmt / rustfmt（按生态选）
-- **Lint** — ESLint / Biome / Ruff / golangci-lint / Clippy（按生态选）
-- **类型检查 (Typecheck)** — tsc strict / pyright / mypy（仅强类型/带类型生态）
-- **EditorConfig** — 跨编辑器基础统一（通用，无语言差异）
-- **提交前钩子 (pre-commit hook)** — 把格式化/Lint 挂到提交前自动跑（husky+lint-staged 或 pre-commit 框架）
+- **格式化 / Lint / 类型检查 / EditorConfig / pre-commit hook**
+- 语言到工具链映射：读 `references/lang-matrix.md`
+- 配置和安装规则：读 `references/build-lint.md`
 
 **第三组 · 提交纪律层**
-- **Conventional Commits 规范** — 写进 AGENTS.md，供 AI 生成 commit 时遵循
-- **提交信息硬钩子** — husky + commitlint（commit-msg 校验）+ lint-staged（暂存区增量 lint）
+- **Conventional Commits 规范 / 提交信息硬钩子**
+- commitlint、husky、lint-staged 规则：读 `references/build-commit.md`
 
 **第四组 · 项目特异约定层（无法生成的问用户+占位）**
-- **Git 操作红线** — 如「未经明确指示不要直接 git commit/push」，置顶写在 AGENTS.md
-- **宿主端 / 运行环境** — 运行在什么容器/端、是否跨端、调试工具（写入 ARCHITECTURE.md，靠问用户）
-- **避坑指南 (Traps)** — 反复踩的坑（如「某文件禁访问 window」），纯靠问用户+占位
-- **分语言 Code Style** — 命名、注释、docstring、目录约定（部分可从现有代码归纳）
+- **Git 操作红线 / 宿主端运行环境 / 避坑指南 / 分语言 Code Style**
+- 这些信息主要来自 Phase 3 问答；落文档时读 `references/build-docs.md`
 
 > **明确不做**：环境护栏层（.env/lockfile/setup 脚本，环境信息改为写进 ARCHITECTURE.md/README）、AI 工具适配层（Skill 同源分发/Rules 迁移/PR 模板/LSP）、一键自验脚本、CI 配置。用户已排除，不要主动扩张。
 
